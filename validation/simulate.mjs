@@ -11,20 +11,21 @@ const cutoff = 59.5;
 const target = 168;
 const horizonMinutes = (target - cutoff) * 60;
 
-function world(seed) {
+function world(seed, stress = false) {
   let state = seed >>> 0;
   const uniform = (lo, hi) => {
     state = (Math.imul(1664525, state) + 1013904223) >>> 0;
     return lo + (hi - lo) * state / 2 ** 32;
   };
-  const gamma = uniform(0.7, 1.3);
+  const gamma = stress ? (seed % 2 ? 0.55 : 1.55) : uniform(0.7, 1.3);
+  const refreshDelay = () => stress ? uniform(7, 11) : uniform(2, 8);
   const groups = [
     ['platinum', 1, 0.3, 1.5, 90, 240],
     ['gold', 2, 2, 8, 75, 180],
     ['silver', 6, 5, 25, 45, 150],
     ['bronze', 10, 55, 85, 8, 40],
     ['bronze', 18, 25, 50, 25, 95],
-    ['bronze', 17, 5, 20, 65, 220],
+    ['bronze', 17, 5, 20, ...(stress ? [160, 480] : [65, 220])],
   ];
   const curves = groups.flatMap(([tier, count, low, high, early, late]) =>
     Array.from({ length: count }, () => ({
@@ -46,11 +47,11 @@ function world(seed) {
     return { players_tracked: players, trophies_earned: Math.round(players * rates.reduce((a, b) => a + b) / 100), rates };
   }
   let current = snapshot(0);
-  let refreshAt = uniform(2, 8);
+  let refreshAt = refreshDelay();
   function read(hour) {
     while (refreshAt <= hour) {
       current = snapshot(refreshAt);
-      refreshAt += uniform(2, 8);
+      refreshAt += refreshDelay();
     }
     return { slot: stamp(hour), at: stamp(hour), ...current };
   }
@@ -102,12 +103,12 @@ function score(predicted, actual) {
   return loss / (actual.length * levels.length);
 }
 
-function compare(seedStart, count, choices) {
+function compare(seedStart, count, choices, stress = false) {
   const sums = choices.map(tuning => ({ ...tuning, loss: 0, wins: 0, maxMs: 0 }));
   let persistence = 0;
   let curve = 0;
   for (let seed = seedStart; seed < seedStart + count; seed++) {
-    const { input, actual } = world(seed);
+    const { input, actual } = world(seed, stress);
     const p = score(house(input, false), actual);
     const c = score(house(input, true), actual);
     persistence += p;
@@ -145,7 +146,10 @@ function checkEdges() {
 }
 
 checkEdges();
+const timingCase = world(95912, true).input;
+assert.deepEqual(forecast({ ...timingCase, target: '' }), forecast(timingCase));
 const choices = [0.30, 0.35, 0.45].flatMap(floor => [0.08, 0.10, 0.12].map(horizon => ({ floor, horizon })));
 const sweep = compare(20261119, 40, choices);
 console.log('Calibration (40 seeds)', JSON.stringify(sweep, null, 2));
 console.log('Holdout (40 separate seeds) using shipped defaults', JSON.stringify(compare(80421, 40, [calibration]), null, 2));
+console.log('Stress (60 separate seeds) using shipped defaults', JSON.stringify(compare(95911, 60, [calibration], true), null, 2));

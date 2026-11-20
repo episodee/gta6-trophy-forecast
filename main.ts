@@ -83,8 +83,10 @@ function saturatingFit(points: Point[], target: number, lastRate: number): Fit |
 }
 
 export function forecast(input: ForecastCase, tuning = calibration) {
-  const target = hourOf(input.target);
   const cutoff = hourOf(input.at);
+  const parsedTarget = hourOf(input.target);
+  // The case also carries the target as an offset from its checkpoint.
+  const target = Number.isFinite(parsedTarget) ? parsedTarget : cutoff + input.horizon_minutes / 60;
   const horizon = Math.sqrt(input.horizon_minutes / 1440);
   const reads = refreshes(input.history);
   const trophies = input.trophies.map(({ id }, index) => {

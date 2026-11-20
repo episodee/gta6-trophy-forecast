@@ -24,3 +24,13 @@ The flat histories reduce to one snapshot, so the model uses persistence except
 for the 100% trophy. A loss near the house's published practice loss of 1.51 is
 expected because the histories give no evidence for the size of the first refresh.
 The kit does not include the practice answers for local scoring.
+
+## Follow-up stress test
+
+With gamma alternating between 0.55 and 1.55, refresh intervals of 7–11 hours,
+and late bronze half-times of 160–480 hours, the ensemble scored 0.215734
+versus 0.418948 for persistence and 0.301528 for the house curve. It beat both
+in all 60 scenarios. These losses and the original calibration and holdout
+losses were unchanged after adding a fallback for an unparseable target:
+derive it from the checkpoint and the horizon. The regression check compares
+the full output with the forecast using the explicit target.
